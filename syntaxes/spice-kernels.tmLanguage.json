@@ -1,0 +1,57 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "spice-kernels",
+	"patterns": [{
+		"name":"comment.block.documentation",
+		"begin": ".",
+		"patterns":[{
+			"include": "#data"
+		}]
+	}],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.spice-kernels",
+				"match": "\\b(if|while|for|return|\\begintext|\\begindata)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.single.spice-kernels",
+			"begin": "'",
+			"end": "'",
+			"patterns": [
+				{
+					"name": "constant.character.escape.spice-kernels",
+					"match": "\\\\."
+				}
+			]
+		},
+		"data": {
+			"name": "keyword.operator.spice-kernels",
+			"begin": "\\\\begindata",
+			"end": "\\\\begintext",
+			"patterns": [
+				{
+					"name": "keyword.operator.spice-kernels",
+					"match": "(=|\\+=|/)"
+				},
+				{
+					"name": "constant.numeric.spice-kernels",
+					"match": "(\\-)?\\d+(\\.)?\\d*((D|E)(\\-)?\\d+)?\\b"
+				},
+				{
+					"include": "#strings"
+				},
+				{
+					"name": "variable.parameter.spice-kernels",
+					"match": "\\b[A-Za-z][A-Za-z0-9\\-_]*\\b"
+				},
+				{
+					"name": "constant.character.escape.spice-kernels",
+					"match": "@[0-9][0-9][0-9][0-9]\\-[A-Z]+\\-\\d+(/[0-9]+:[0-9]+:[0-9]+)?"
+				}
+			]
+		}
+	},
+	"scopeName": "source.spice"
+}

@@ -1,0 +1,25 @@
+{
+    "name": "spice-kernels",
+    "displayName": "spice-kernels",
+    "description": "Provides syntax highlighting for SPICE text kernels",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.51.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "spice-kernels",
+            "aliases": ["spice-kernels", "spice-kernels"],
+            "extensions": [".tm",".tf",".tpc",".txt",".tsc",".ti",".tls"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "spice-kernels",
+            "scopeName": "source.spice",
+            "path": "./syntaxes/spice-kernels.tmLanguage.json"
+        }]
+    }
+}
