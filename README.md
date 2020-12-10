@@ -22,4 +22,8 @@ Initial release of spice-kernels
 
 ### 0.0.2
 
-Trying to get images to show up in the marketplace
+Trying to get images to show up in the marketplace.
+
+### 0.0.3
+
+Add logo
