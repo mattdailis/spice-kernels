@@ -1,4 +1,5 @@
 {
+    "publisher": "MattDailis",
     "name": "spice-kernels",
     "displayName": "spice-kernels",
     "description": "Provides syntax highlighting for SPICE text kernels",
@@ -21,5 +22,9 @@
             "scopeName": "source.spice",
             "path": "./syntaxes/spice-kernels.tmLanguage.json"
         }]
+    },
+    "repository": {
+        "type" : "git",
+        "url" : "https://github.com/mattdailis/spice-kernels.git"
     }
 }
