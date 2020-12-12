@@ -23,22 +23,53 @@ static async create(
 		return new BinaryKernelDocument(uri, fileData, delegate);
 	}
 
-	private static async readFile(uri: vscode.Uri): Promise<Uint8Array> {
-		if (uri.scheme === 'untitled') {
-			return new Uint8Array();
+	private static async readFile(uri: vscode.Uri): Promise<string> {
+		function string2Bin(str: string) {
+			var result = [];
+			for (var i = 0; i < str.length; i++) {
+				result.push(str.charCodeAt(i));
+			}
+		return result;
 		}
-		return vscode.workspace.fs.readFile(uri);
+		
+		function bin2String(array: number[]) {
+			return String.fromCharCode.apply(String, array)
+		}
+		const bytes = vscode.workspace.fs.readFile(uri);
+		const b = Array.from(await bytes)
+		const header = b.slice(0, 8).filter(n => n >= 32 && n <= 126);
+		var comment = ""
+		var runOfZeros = 0
+		for (var byte of b.slice(1024, b.length)) {
+			if (byte === 0 && runOfZeros < 2) {
+				comment += "<br />"
+				runOfZeros += 1
+				continue
+			}
+			runOfZeros = 0
+			const nextChar = String.fromCharCode(byte)
+			// if (nextChar == ';') {
+			// 	comment += nextChar;
+			// 	break
+			// }
+			if (!(byte >= 32 && byte <= 126)) {
+				// If we encounter a non-ascii and non-zero byte, this is the End of Comment Section
+				break
+			}
+			comment += nextChar
+		}
+		return bin2String(header) + "<br />" + comment;
 	}
 
 	private readonly _uri: vscode.Uri;
 
-	private _documentData: Uint8Array;
+	private _documentData: string;
 
 	private readonly _delegate: BinaryKernelDocumentDelegate;
 
 	private constructor(
 		uri: vscode.Uri,
-		initialContent: Uint8Array,
+		initialContent: string,
 		delegate: BinaryKernelDocumentDelegate
 	) {
 		super();
@@ -49,7 +80,7 @@ static async create(
 
 	public get uri() { return this._uri; }
 
-	public get documentData(): Uint8Array { return this._documentData; }
+	public get documentData(): string { return this._documentData; }
 
 	private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
 	/**
@@ -175,46 +206,25 @@ export class BinaryKernelEditorProvider implements vscode.CustomReadonlyEditorPr
 		webviewPanel.webview.options = {
 			enableScripts: true,
 		};
-		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
+		webviewPanel.webview.html = document.documentData; //this.getHtmlForWebview(webviewPanel.webview);
 
-		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(document, e));
+		// webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(document, e));
 
-		// Wait for the webview to be properly ready before we init
-		webviewPanel.webview.onDidReceiveMessage(e => {
-			if (e.type === 'ready') {
-				if (document.uri.scheme === 'untitled') {
-					this.postMessage(webviewPanel, 'init', {
-						untitled: true
-					});
-				} else {
-					this.postMessage(webviewPanel, 'init', {
-						value: document.documentData
-					});
-				}
-			}
-		});
+		// // Wait for the webview to be properly ready before we init
+		// webviewPanel.webview.onDidReceiveMessage(e => {
+		// 	if (e.type === 'ready') {
+		// 		if (document.uri.scheme === 'untitled') {
+		// 			this.postMessage(webviewPanel, 'init', {
+		// 				untitled: true
+		// 			});
+		// 		} else {
+		// 			this.postMessage(webviewPanel, 'init', {
+		// 				value: document.documentData
+		// 			});
+		// 		}
+		// 	}
+		// });
 	}
-
-	// private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<BinaryKernelDocument>>();
-	// public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
-
-	// // public saveCustomDocument(document: BinaryKernelDocument, cancellation: vscode.CancellationToken): Thenable<void> {
-	// // 	return document.save(cancellation);
-	// // }
-
-	// // public saveCustomDocumentAs(document: PawDrawDocument, destination: vscode.Uri, cancellation: vscode.CancellationToken): Thenable<void> {
-	// // 	return document.saveAs(destination, cancellation);
-	// // }
-
-	// // public revertCustomDocument(document: PawDrawDocument, cancellation: vscode.CancellationToken): Thenable<void> {
-	// // 	return document.revert(cancellation);
-	// // }
-
-	// // public backupCustomDocument(document: PawDrawDocument, context: vscode.CustomDocumentBackupContext, cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
-	// // 	return document.backup(context.destination, cancellation);
-	// // }
-
-	// //#endregion
 
 	/**
 	 * Get the static HTML used for in our editor's webviews.
@@ -236,42 +246,39 @@ export class BinaryKernelEditorProvider implements vscode.CustomReadonlyEditorPr
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
 
-		return "Hello world"; // /* html */`
-			// <!DOCTYPE html>
-			// <html lang="en">
-			// <head>
-			// 	<meta charset="UTF-8">
+		return /* html */`<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
 
-			// 	<!--
-			// 	Use a content security policy to only allow loading images from https or from our extension directory,
-			// 	and only allow scripts that have a specific nonce.
-			// 	-->
-			// 	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+				<!--
+				Use a content security policy to only allow loading images from https or from our extension directory,
+				and only allow scripts that have a specific nonce.
+				-->
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 
-			// 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-			// 	<link href="${styleResetUri}" rel="stylesheet" />
-			// 	<link href="${styleVSCodeUri}" rel="stylesheet" />
-			// 	<link href="${styleMainUri}" rel="stylesheet" />
+				<link href="${styleResetUri}" rel="stylesheet" />
+				<link href="${styleVSCodeUri}" rel="stylesheet" />
+				<link href="${styleMainUri}" rel="stylesheet" />
 
-			// 	<title>Paw Draw</title>
-			// </head>
-			// <body>
-			// 	<div class="drawing-canvas"></div>
+				<title>BSP</title>
+			</head>
+			<body>
+				<div class="drawing-canvas"></div>
 
-			// 	<div class="drawing-controls">
-			// 		<button data-color="black" class="black active" title="Black"></button>
-			// 		<button data-color="white" class="white" title="White"></button>
-			// 		<button data-color="red" class="red" title="Red"></button>
-			// 		<button data-color="green" class="green" title="Green"></button>
-			// 		<button data-color="blue" class="blue" title="Blue"></button>
-			// 	</div>
-
-			// 	Hello world
+				<div class="drawing-controls">
+					<button data-color="black" class="black active" title="Black"></button>
+					<button data-color="white" class="white" title="White"></button>
+					<button data-color="red" class="red" title="Red"></button>
+					<button data-color="green" class="green" title="Green"></button>
+					<button data-color="blue" class="blue" title="Blue"></button>
+				</div>
 				
-			// 	<script nonce="${nonce}" src="${scriptUri}"></script>
-			// </body>
-			// </html>`;
+				<script nonce="${nonce}" src="${scriptUri}"></script>
+			</body>
+			</html>`;
 	}
 
 	private _requestId = 1;

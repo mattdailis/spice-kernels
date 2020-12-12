@@ -34,10 +34,40 @@ class BinaryKernelDocument extends dispose_1.Disposable {
         return new BinaryKernelDocument(uri, fileData, delegate);
     }
     static async readFile(uri) {
-        if (uri.scheme === 'untitled') {
-            return new Uint8Array();
+        function string2Bin(str) {
+            var result = [];
+            for (var i = 0; i < str.length; i++) {
+                result.push(str.charCodeAt(i));
+            }
+            return result;
         }
-        return vscode.workspace.fs.readFile(uri);
+        function bin2String(array) {
+            return String.fromCharCode.apply(String, array);
+        }
+        const bytes = vscode.workspace.fs.readFile(uri);
+        const b = Array.from(await bytes);
+        const header = b.slice(0, 8).filter(n => n >= 32 && n <= 126);
+        var comment = "";
+        var runOfZeros = 0;
+        for (var byte of b.slice(1024, b.length)) {
+            if (byte === 0 && runOfZeros < 2) {
+                comment += "<br />";
+                runOfZeros += 1;
+                continue;
+            }
+            runOfZeros = 0;
+            const nextChar = String.fromCharCode(byte);
+            // if (nextChar == ';') {
+            // 	comment += nextChar;
+            // 	break
+            // }
+            if (!(byte >= 32 && byte <= 126)) {
+                // If we encounter a non-ascii and non-zero byte, this is the End of Comment Section
+                break;
+            }
+            comment += nextChar;
+        }
+        return bin2String(header) + "<br />" + comment;
     }
     get uri() { return this._uri; }
     get documentData() { return this._documentData; }
@@ -122,39 +152,23 @@ class BinaryKernelEditorProvider {
         webviewPanel.webview.options = {
             enableScripts: true,
         };
-        webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
-        webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(document, e));
-        // Wait for the webview to be properly ready before we init
-        webviewPanel.webview.onDidReceiveMessage(e => {
-            if (e.type === 'ready') {
-                if (document.uri.scheme === 'untitled') {
-                    this.postMessage(webviewPanel, 'init', {
-                        untitled: true
-                    });
-                }
-                else {
-                    this.postMessage(webviewPanel, 'init', {
-                        value: document.documentData
-                    });
-                }
-            }
-        });
+        webviewPanel.webview.html = document.documentData; //this.getHtmlForWebview(webviewPanel.webview);
+        // webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(document, e));
+        // // Wait for the webview to be properly ready before we init
+        // webviewPanel.webview.onDidReceiveMessage(e => {
+        // 	if (e.type === 'ready') {
+        // 		if (document.uri.scheme === 'untitled') {
+        // 			this.postMessage(webviewPanel, 'init', {
+        // 				untitled: true
+        // 			});
+        // 		} else {
+        // 			this.postMessage(webviewPanel, 'init', {
+        // 				value: document.documentData
+        // 			});
+        // 		}
+        // 	}
+        // });
     }
-    // private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<BinaryKernelDocument>>();
-    // public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
-    // // public saveCustomDocument(document: BinaryKernelDocument, cancellation: vscode.CancellationToken): Thenable<void> {
-    // // 	return document.save(cancellation);
-    // // }
-    // // public saveCustomDocumentAs(document: PawDrawDocument, destination: vscode.Uri, cancellation: vscode.CancellationToken): Thenable<void> {
-    // // 	return document.saveAs(destination, cancellation);
-    // // }
-    // // public revertCustomDocument(document: PawDrawDocument, cancellation: vscode.CancellationToken): Thenable<void> {
-    // // 	return document.revert(cancellation);
-    // // }
-    // // public backupCustomDocument(document: PawDrawDocument, context: vscode.CustomDocumentBackupContext, cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
-    // // 	return document.backup(context.destination, cancellation);
-    // // }
-    // //#endregion
     /**
      * Get the static HTML used for in our editor's webviews.
      */
@@ -166,35 +180,39 @@ class BinaryKernelEditorProvider {
         const styleMainUri = webview.asWebviewUri(vscode.Uri.file(path.join(this._context.extensionPath, 'media', 'pawDraw.css')));
         // Use a nonce to whitelist which scripts can be run
         const nonce = util_1.getNonce();
-        return "Hello world"; // /* html */`
-        // <!DOCTYPE html>
-        // <html lang="en">
-        // <head>
-        // 	<meta charset="UTF-8">
-        // 	<!--
-        // 	Use a content security policy to only allow loading images from https or from our extension directory,
-        // 	and only allow scripts that have a specific nonce.
-        // 	-->
-        // 	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
-        // 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-        // 	<link href="${styleResetUri}" rel="stylesheet" />
-        // 	<link href="${styleVSCodeUri}" rel="stylesheet" />
-        // 	<link href="${styleMainUri}" rel="stylesheet" />
-        // 	<title>Paw Draw</title>
-        // </head>
-        // <body>
-        // 	<div class="drawing-canvas"></div>
-        // 	<div class="drawing-controls">
-        // 		<button data-color="black" class="black active" title="Black"></button>
-        // 		<button data-color="white" class="white" title="White"></button>
-        // 		<button data-color="red" class="red" title="Red"></button>
-        // 		<button data-color="green" class="green" title="Green"></button>
-        // 		<button data-color="blue" class="blue" title="Blue"></button>
-        // 	</div>
-        // 	Hello world
-        // 	<script nonce="${nonce}" src="${scriptUri}"></script>
-        // </body>
-        // </html>`;
+        return /* html */ `<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+
+				<!--
+				Use a content security policy to only allow loading images from https or from our extension directory,
+				and only allow scripts that have a specific nonce.
+				-->
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+				<link href="${styleResetUri}" rel="stylesheet" />
+				<link href="${styleVSCodeUri}" rel="stylesheet" />
+				<link href="${styleMainUri}" rel="stylesheet" />
+
+				<title>BSP</title>
+			</head>
+			<body>
+				<div class="drawing-canvas"></div>
+
+				<div class="drawing-controls">
+					<button data-color="black" class="black active" title="Black"></button>
+					<button data-color="white" class="white" title="White"></button>
+					<button data-color="red" class="red" title="Red"></button>
+					<button data-color="green" class="green" title="Green"></button>
+					<button data-color="blue" class="blue" title="Blue"></button>
+				</div>
+				
+				<script nonce="${nonce}" src="${scriptUri}"></script>
+			</body>
+			</html>`;
     }
     postMessageWithResponse(panel, type, body) {
         const requestId = this._requestId++;
