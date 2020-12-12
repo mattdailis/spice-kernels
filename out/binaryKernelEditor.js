@@ -4,7 +4,6 @@ exports.BinaryKernelEditorProvider = void 0;
 const path = require("path");
 const vscode = require("vscode");
 const dispose_1 = require("./dispose");
-const util_1 = require("./util");
 /**
  * Define the document (the data model) used for paw draw files.
  */
@@ -46,13 +45,17 @@ class BinaryKernelDocument extends dispose_1.Disposable {
         }
         const bytes = vscode.workspace.fs.readFile(uri);
         const b = Array.from(await bytes);
+        const lines = [];
         const header = b.slice(0, 8).filter(n => n >= 32 && n <= 126);
-        var comment = "";
+        lines.push(bin2String(header));
+        lines.push("");
+        var currentLine = "";
         var runOfZeros = 0;
         for (var byte of b.slice(1024, b.length)) {
             if (byte === 0) {
                 if (runOfZeros < 2) {
-                    comment += "<br />";
+                    lines.push(currentLine);
+                    currentLine = "";
                 }
                 runOfZeros += 1;
                 continue;
@@ -67,9 +70,10 @@ class BinaryKernelDocument extends dispose_1.Disposable {
                 // If we encounter a non-ascii and non-zero byte, this is the End of Comment Section
                 break;
             }
-            comment += nextChar;
+            currentLine += nextChar;
         }
-        return bin2String(header) + "<br />" + comment;
+        lines.push(currentLine);
+        return lines;
     }
     get uri() { return this._uri; }
     get documentData() { return this._documentData; }
@@ -151,10 +155,10 @@ class BinaryKernelEditorProvider {
         // Add the webview to our internal set of active webviews
         this.webviews.add(document.uri, webviewPanel);
         // Setup initial content for the webview
-        webviewPanel.webview.options = {
-            enableScripts: true,
-        };
-        webviewPanel.webview.html = document.documentData; //this.getHtmlForWebview(webviewPanel.webview);
+        // webviewPanel.webview.options = {
+        // 	enableScripts: true,
+        // };
+        webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview, document.documentData);
         // webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(document, e));
         // // Wait for the webview to be properly ready before we init
         // webviewPanel.webview.onDidReceiveMessage(e => {
@@ -174,45 +178,18 @@ class BinaryKernelEditorProvider {
     /**
      * Get the static HTML used for in our editor's webviews.
      */
-    getHtmlForWebview(webview) {
-        // Local path to script and css for the webview
-        const scriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(this._context.extensionPath, 'media', 'pawDraw.js')));
-        const styleResetUri = webview.asWebviewUri(vscode.Uri.file(path.join(this._context.extensionPath, 'media', 'reset.css')));
-        const styleVSCodeUri = webview.asWebviewUri(vscode.Uri.file(path.join(this._context.extensionPath, 'media', 'vscode.css')));
-        const styleMainUri = webview.asWebviewUri(vscode.Uri.file(path.join(this._context.extensionPath, 'media', 'pawDraw.css')));
-        // Use a nonce to whitelist which scripts can be run
-        const nonce = util_1.getNonce();
+    getHtmlForWebview(webview, lines) {
+        const styleUri = webview.asWebviewUri(vscode.Uri.file(path.join(this._context.extensionPath, 'media', 'style.css')));
         return /* html */ `<!DOCTYPE html>
 			<html lang="en">
 			<head>
-				<meta charset="UTF-8">
-
-				<!--
-				Use a content security policy to only allow loading images from https or from our extension directory,
-				and only allow scripts that have a specific nonce.
-				-->
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
-
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-				<link href="${styleResetUri}" rel="stylesheet" />
-				<link href="${styleVSCodeUri}" rel="stylesheet" />
-				<link href="${styleMainUri}" rel="stylesheet" />
-
 				<title>BSP</title>
+				<link href="${styleUri}" rel="stylesheet" />
 			</head>
 			<body>
-				<div class="drawing-canvas"></div>
-
-				<div class="drawing-controls">
-					<button data-color="black" class="black active" title="Black"></button>
-					<button data-color="white" class="white" title="White"></button>
-					<button data-color="red" class="red" title="Red"></button>
-					<button data-color="green" class="green" title="Green"></button>
-					<button data-color="blue" class="blue" title="Blue"></button>
-				</div>
-				
-				<script nonce="${nonce}" src="${scriptUri}"></script>
+				<code>
+					${lines.join("<br />")}
+				</code>
 			</body>
 			</html>`;
     }

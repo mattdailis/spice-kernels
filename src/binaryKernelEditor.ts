@@ -23,13 +23,13 @@ static async create(
 		return new BinaryKernelDocument(uri, fileData, delegate);
 	}
 
-	private static async readFile(uri: vscode.Uri): Promise<string> {
+	private static async readFile(uri: vscode.Uri): Promise<string[]> {
 		function string2Bin(str: string) {
 			var result = [];
 			for (var i = 0; i < str.length; i++) {
 				result.push(str.charCodeAt(i));
 			}
-		return result;
+			return result;
 		}
 		
 		function bin2String(array: number[]) {
@@ -37,13 +37,17 @@ static async create(
 		}
 		const bytes = vscode.workspace.fs.readFile(uri);
 		const b = Array.from(await bytes)
+		const lines = []
 		const header = b.slice(0, 8).filter(n => n >= 32 && n <= 126);
-		var comment = ""
+		lines.push(bin2String(header))
+		lines.push("")
+		var currentLine = ""
 		var runOfZeros = 0
 		for (var byte of b.slice(1024, b.length)) {
 			if (byte === 0) {
 				if (runOfZeros < 2) {
-					comment += "<br />"
+					lines.push(currentLine)
+					currentLine = ""
 				}
 				runOfZeros += 1
 				continue
@@ -58,20 +62,21 @@ static async create(
 				// If we encounter a non-ascii and non-zero byte, this is the End of Comment Section
 				break
 			}
-			comment += nextChar
+			currentLine += nextChar
 		}
-		return bin2String(header) + "<br />" + comment;
+		lines.push(currentLine)
+		return lines;
 	}
 
 	private readonly _uri: vscode.Uri;
 
-	private _documentData: string;
+	private _documentData: string[];
 
 	private readonly _delegate: BinaryKernelDocumentDelegate;
 
 	private constructor(
 		uri: vscode.Uri,
-		initialContent: string,
+		initialContent: string[],
 		delegate: BinaryKernelDocumentDelegate
 	) {
 		super();
@@ -82,7 +87,7 @@ static async create(
 
 	public get uri() { return this._uri; }
 
-	public get documentData(): string { return this._documentData; }
+	public get documentData(): string[] { return this._documentData; }
 
 	private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
 	/**
@@ -205,10 +210,10 @@ export class BinaryKernelEditorProvider implements vscode.CustomReadonlyEditorPr
 		this.webviews.add(document.uri, webviewPanel);
 
 		// Setup initial content for the webview
-		webviewPanel.webview.options = {
-			enableScripts: true,
-		};
-		webviewPanel.webview.html = document.documentData; //this.getHtmlForWebview(webviewPanel.webview);
+		// webviewPanel.webview.options = {
+		// 	enableScripts: true,
+		// };
+		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview, document.documentData);
 
 		// webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(document, e));
 
@@ -231,54 +236,20 @@ export class BinaryKernelEditorProvider implements vscode.CustomReadonlyEditorPr
 	/**
 	 * Get the static HTML used for in our editor's webviews.
 	 */
-	private getHtmlForWebview(webview: vscode.Webview): string {
-		// Local path to script and css for the webview
-		const scriptUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, 'media', 'pawDraw.js')
-		)); const styleResetUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, 'media', 'reset.css')
+	private getHtmlForWebview(webview: vscode.Webview, lines: string[]): string {//w(webview: vscode.Webview): string {
+		const styleUri = webview.asWebviewUri(vscode.Uri.file(
+			path.join(this._context.extensionPath, 'media', 'style.css')
 		));
-		const styleVSCodeUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, 'media', 'vscode.css')
-		));
-		const styleMainUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, 'media', 'pawDraw.css')
-		));
-
-		// Use a nonce to whitelist which scripts can be run
-		const nonce = getNonce();
-
 		return /* html */`<!DOCTYPE html>
 			<html lang="en">
 			<head>
-				<meta charset="UTF-8">
-
-				<!--
-				Use a content security policy to only allow loading images from https or from our extension directory,
-				and only allow scripts that have a specific nonce.
-				-->
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
-
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-				<link href="${styleResetUri}" rel="stylesheet" />
-				<link href="${styleVSCodeUri}" rel="stylesheet" />
-				<link href="${styleMainUri}" rel="stylesheet" />
-
 				<title>BSP</title>
+				<link href="${styleUri}" rel="stylesheet" />
 			</head>
 			<body>
-				<div class="drawing-canvas"></div>
-
-				<div class="drawing-controls">
-					<button data-color="black" class="black active" title="Black"></button>
-					<button data-color="white" class="white" title="White"></button>
-					<button data-color="red" class="red" title="Red"></button>
-					<button data-color="green" class="green" title="Green"></button>
-					<button data-color="blue" class="blue" title="Blue"></button>
-				</div>
-				
-				<script nonce="${nonce}" src="${scriptUri}"></script>
+				<code>
+					${lines.join("<br />")}
+				</code>
 			</body>
 			</html>`;
 	}
