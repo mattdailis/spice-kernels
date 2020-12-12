@@ -39,3 +39,7 @@ Bugfix for handling repeated zeros in file.
 ### 0.0.6
 
 Use the default text editor font
+
+### 0.0.7
+
+Use inline css because I'm having trouble getting external css to work

@@ -4,7 +4,7 @@
     "displayName": "spice-kernels",
     "icon": "logo.png",
     "description": "Provides syntax highlighting for SPICE text kernels",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "engines": {
         "vscode": "^1.51.0"
     },
