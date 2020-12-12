@@ -27,3 +27,7 @@ Trying to get images to show up in the marketplace.
 ### 0.0.3
 
 Add logo
+
+### 0.0.4
+
+Add support for comment sections of .bsp, .bds, and .bc files
