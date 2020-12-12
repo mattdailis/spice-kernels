@@ -31,3 +31,7 @@ Add logo
 ### 0.0.4
 
 Add support for comment sections of .bsp, .bds, and .bc files
+
+### 0.0.5
+
+Bugfix for handling repeated zeros in file.

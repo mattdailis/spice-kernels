@@ -50,8 +50,10 @@ class BinaryKernelDocument extends dispose_1.Disposable {
         var comment = "";
         var runOfZeros = 0;
         for (var byte of b.slice(1024, b.length)) {
-            if (byte === 0 && runOfZeros < 2) {
-                comment += "<br />";
+            if (byte === 0) {
+                if (runOfZeros < 2) {
+                    comment += "<br />";
+                }
                 runOfZeros += 1;
                 continue;
             }
