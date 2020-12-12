@@ -12,20 +12,64 @@
         "Programming Languages"
     ],
     "contributes": {
-        "languages": [{
-            "id": "spice-kernels",
-            "aliases": ["spice-kernels", "spice-kernels"],
-            "extensions": [".tm",".tf",".tpc",".txt",".tsc",".ti",".tls"],
-            "configuration": "./language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "spice-kernels",
-            "scopeName": "source.spice",
-            "path": "./syntaxes/spice-kernels.tmLanguage.json"
-        }]
+        "languages": [
+            {
+                "id": "spice-kernels",
+                "aliases": [
+                    "spice-kernels",
+                    "spice-kernels"
+                ],
+                "extensions": [
+                    ".tm",
+                    ".tf",
+                    ".tpc",
+                    ".txt",
+                    ".tsc",
+                    ".ti",
+                    ".tls"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "spice-kernels",
+                "scopeName": "source.spice",
+                "path": "./syntaxes/spice-kernels.tmLanguage.json"
+            }
+        ],
+        "customEditors": [
+            {
+                "viewType": "spice-kernels.binaryKernel",
+                "displayName": "SPICE Binary Kernel",
+                "selector": [
+                    {
+                        "filenamePattern": "*.bsp"
+                    }
+                ]
+            }
+        ]
     },
+    "activationEvents": [
+		"onCustomEditor:spice-kernels.binaryKernel"
+    ],
+    "main": "./out/extension.js",
+    "scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"lint": "eslint . --ext .ts,.tsx",
+		"watch": "tsc -w -p ./"
+	},
     "repository": {
-        "type" : "git",
-        "url" : "https://github.com/mattdailis/spice-kernels.git"
+        "type": "git",
+        "url": "https://github.com/mattdailis/spice-kernels.git"
+    },
+    "devDependencies": {
+        "@types/node": "^12.12.0",
+        "@types/vscode": "^1.46.0",
+        "@typescript-eslint/eslint-plugin": "^3.0.2",
+        "@typescript-eslint/parser": "^3.0.2",
+        "eslint": "^7.1.0",
+        "typescript": "^4.0.2"
     }
 }
