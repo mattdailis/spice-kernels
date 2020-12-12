@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BinaryKernelEditorProvider = void 0;
-const path = require("path");
 const vscode = require("vscode");
 const dispose_1 = require("./dispose");
 /**
@@ -179,12 +178,17 @@ class BinaryKernelEditorProvider {
      * Get the static HTML used for in our editor's webviews.
      */
     getHtmlForWebview(webview, lines) {
-        const styleUri = webview.asWebviewUri(vscode.Uri.file(path.join(this._context.extensionPath, 'media', 'style.css')));
         return /* html */ `<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<title>BSP</title>
-				<link href="${styleUri}" rel="stylesheet" />
+				<style>
+					code {
+						color: var(--vscode-editor-foreground);
+						font-family: var(--vscode-editor-font-family);
+						font-size: var(--vscode-editor-font-size);
+					}
+				</style>
 			</head>
 			<body>
 				<code>

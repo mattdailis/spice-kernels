@@ -237,14 +237,17 @@ export class BinaryKernelEditorProvider implements vscode.CustomReadonlyEditorPr
 	 * Get the static HTML used for in our editor's webviews.
 	 */
 	private getHtmlForWebview(webview: vscode.Webview, lines: string[]): string {//w(webview: vscode.Webview): string {
-		const styleUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, 'media', 'style.css')
-		));
 		return /* html */`<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<title>BSP</title>
-				<link href="${styleUri}" rel="stylesheet" />
+				<style>
+					code {
+						color: var(--vscode-editor-foreground);
+						font-family: var(--vscode-editor-font-family);
+						font-size: var(--vscode-editor-font-size);
+					}
+				</style>
 			</head>
 			<body>
 				<code>
