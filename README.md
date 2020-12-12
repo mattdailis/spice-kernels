@@ -35,3 +35,7 @@ Add support for comment sections of .bsp, .bds, and .bc files
 ### 0.0.5
 
 Bugfix for handling repeated zeros in file.
+
+### 0.0.6
+
+Use the default text editor font
