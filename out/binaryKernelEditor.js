@@ -32,13 +32,6 @@ class BinaryKernelDocument extends dispose_1.Disposable {
         return new BinaryKernelDocument(uri, fileData, delegate);
     }
     static async readFile(uri) {
-        function string2Bin(str) {
-            var result = [];
-            for (var i = 0; i < str.length; i++) {
-                result.push(str.charCodeAt(i));
-            }
-            return result;
-        }
         function bin2String(array) {
             return String.fromCharCode.apply(String, array);
         }
@@ -61,10 +54,6 @@ class BinaryKernelDocument extends dispose_1.Disposable {
             }
             runOfZeros = 0;
             const nextChar = String.fromCharCode(byte);
-            // if (nextChar == ';') {
-            // 	comment += nextChar;
-            // 	break
-            // }
             if (!(byte >= 32 && byte <= 126)) {
                 // If we encounter a non-ascii and non-zero byte, this is the End of Comment Section
                 break;

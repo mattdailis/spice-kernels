@@ -24,14 +24,6 @@ static async create(
 	}
 
 	private static async readFile(uri: vscode.Uri): Promise<string[]> {
-		function string2Bin(str: string) {
-			var result = [];
-			for (var i = 0; i < str.length; i++) {
-				result.push(str.charCodeAt(i));
-			}
-			return result;
-		}
-		
 		function bin2String(array: number[]) {
 			return String.fromCharCode.apply(String, array)
 		}
@@ -54,10 +46,6 @@ static async create(
 			}
 			runOfZeros = 0
 			const nextChar = String.fromCharCode(byte)
-			// if (nextChar == ';') {
-			// 	comment += nextChar;
-			// 	break
-			// }
 			if (!(byte >= 32 && byte <= 126)) {
 				// If we encounter a non-ascii and non-zero byte, this is the End of Comment Section
 				break
